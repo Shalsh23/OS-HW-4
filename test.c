@@ -1,61 +1,51 @@
 #include <stdio.h>
 
 
-// small func
+// func
 void f1()
 {
 
 }
-void f4()
-{
 
-}
-// medium func
-void f2()
-{
-
-}
-void f5()
-{
-
-}
-// large func
-void f3()
-{
-
-}
-void f6()
-{
-
-}
 
 int main()
 {
 Bag B;
 
-int f1arg[1000];
-int f2arg[1000];
-int f3arg[1000];
+long int small_arg[12]; // small
+long int med_arg [12];
+long int large_arg[12];
 
-int f4arg[1000];
-int f5arg[1000];
-int f6arg[1000];
+int i;
+for(i = 0; i < 12; i++)
+{
+	small_arg[i] = i;
+}
 
-// sm 1,2 - small
+for(i = 0; i < 12; i++)
+{
+	small_arg[i] = 100 + i;
+}
+
+for(i = 0; i < 12; i++)
+{
+	small_arg[i] = 10000 + i;
+}
+
 // sm 3,4 - medium
 // sm 5,6 - large
 
-B.taskAdd(f1,f1arg,1);
+// sm 1,2 - small
+taskAdd(f1,small_arg,1);
+taskAdd(f1,small_arg+6,2);
 
-B.taskAdd(f2,f1arg,3);
+// medium tasks
+taskAdd(f1,med_arg,3);
+taskAdd(f1,med_arg+6,4);
 
-B.taskAdd(f3,f1arg,5);
-
-B.taskAdd(f4,f1arg,2);
-
-B.taskAdd(f5,f1arg,4);
-
-B.taskAdd(f6,f1arg,6);
+//large tasks
+taskAdd(f1,large_arg,5);
+taskAdd(f1,large_arg+6,6);
 
 // call the kernel function
 schedule();
