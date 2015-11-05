@@ -2,15 +2,30 @@
 #include <stdlib.h>
 #include <cuda_runtime.h>
 
-unsigned int* __SMC_buildChunkSeq()
-{
 
+unsigned int jobChunkArray[1000];
+int jobChunkCounter = 0;
+int SMC_workerCount[] = {0, 0, 0, 0, 0, 0}; // Array of counter for blocks created for each SM.
+
+__device__ __host__ void square(long int * d_array_in, long int * d_array_out, int length)//, unsigned int * __SMC_chunkCount, unsigned int * __SMC_newChunkSeq, unsigned int __SMC_chunksPerSM)
+{
+	// __SMC_Begin
+	int x = threadIdx.x + blockIdx.x * blockDim.x;
+	//printf("The value of x is %d \n",x);
+	//printf("The value of threadIdx.x is %d\n",threadIdx.x);
+      //  printf("The value of blockIdx.x is %d\n", blockIdx.x);
+	//printf("The value of blockIdx.x is %d\n",blockDim.x);
+	if (x > length)
+		return;
+    int f = d_array_in[x];
+    d_array_out[x] = f * f;
+    // __SMC_End
 }
 
 #define __SMC_init  \
 unsigned int * __SMC_workersNeeded = 2; \ //__SMC_numNeeded();  \
-unsigned int * __SMC_newChunkSeq = __SMC_buildChunkSeq();  \
-unsigned int * __SMC_workerCount = __SMC_initiateArray();
+unsigned int * __SMC_newChunkSeq = jobChunkArray;  \
+unsigned int * __SMC_workerCount = SMC_workerCount;
 
 #define __SMC_Begin  \
 __shared int __SMC_workingCTAs;  \
@@ -56,7 +71,24 @@ int taskAdd(void* (*func)(void*), void* arg, int sm)
 	Bag[sm_index[sm]][sm].arg = arg;
 	int retval = jobchunk_id;
 	jobchunk_id++;
+	jobChunkArray[jobChunkCounter] = arg;
+	jobChunkCounter++;
 	return retval;
+}
+
+void square(long int * d_array_in, long int * d_array_out, int length)//, unsigned int * __SMC_chunkCount, unsigned int * __SMC_newChunkSeq, unsigned int __SMC_chunksPerSM)
+{
+	// __SMC_Begin
+	int x = threadIdx.x + blockIdx.x * blockDim.x;
+	//printf("The value of x is %d \n",x);
+	//printf("The value of threadIdx.x is %d\n",threadIdx.x);
+      //  printf("The value of blockIdx.x is %d\n", blockIdx.x);
+	//printf("The value of blockIdx.x is %d\n",blockDim.x);
+	if (x > length)
+		return;
+    int f = d_array_in[x];
+    d_array_out[x] = f * f;
+    // __SMC_End
 }
 
 __global__ persistent_func(Bag_elem* Bag)
