@@ -10,8 +10,17 @@
 // }
 
 
-int main()
+int main(int argc, char* argv[])
 {
+
+	if (argc != 3)
+    {
+        printf("usage ./Main base_path_with_trailing_slash number_of_blocks number_of_threads\n");
+        exit(1);
+    }
+	int n = atoi(argv[1]);
+	int m = atoi(argv[2]);
+	
 	Bag B;
 
 	long int small_arg[12]; // small
@@ -50,5 +59,5 @@ int main()
 	taskAdd(square,large_arg+6,6);
 
 	// call the kernel function
-	schedule();
+	schedule(n, m);
 }
