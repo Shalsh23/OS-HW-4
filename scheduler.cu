@@ -91,17 +91,14 @@ __global__ void persistent_func(Bag_elem (*Bag)[1000], func d_user_func, unsigne
 
 extern "C" void schedule(int n, int m)
 {
-	if (debug) printf("In schedule:		Enter. Will copy device function pointer to host side.\n", sm);
+	if (debug) printf("In schedule:		Enter. Will copy device function pointer to host side.\n");
 
 	func h_user_func;
 
 	// Copy device function pointer to host side
 	cudaMemcpyFromSymbol( &h_user_func, function, sizeof( func ) );
 
-	//f_arg h_f_arg;
-	//cudaMemcpyFromSymbol( &h_f_arg, farg_dev, sizeof( f_arg ) );
-
-	//f_arg d_f_arg = h_f_arg;
+	if (debug) printf("In schedule:		Copying of the device function pointer done.\n");
 
 	func d_user_func = h_user_func;
 
