@@ -9,7 +9,6 @@
 
 // }
 
-
 int main(int argc, char* argv[])
 {
 
@@ -21,7 +20,7 @@ int main(int argc, char* argv[])
 	int n = atoi(argv[1]);
 	int m = atoi(argv[2]);
 	
-	Bag B;
+	// Bag B;
 
 	long int small_arg[12]; // small
 	long int med_arg [12];

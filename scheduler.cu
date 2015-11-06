@@ -51,7 +51,7 @@ unsigned int SMC_workerCount[] = {0, 0, 0, 0, 0, 0}; // Array of counter for blo
 // uint __SMC_smid;  \
 //  asm("mov.u32 %0, %smid;" : "=r"(__SMC_smid) );
 
-__host__ __device__ void * square(int *array, int threadIdx)
+__device__ void * square(void *arr)
 {
 	// __SMC_Begin
 	//printf("The value of x is %d \n",x);
@@ -62,13 +62,14 @@ __host__ __device__ void * square(int *array, int threadIdx)
 
 	//if (x > length)
 	//	return;
-    int f = array[threadIdx];
-    array[threadIdx] = f * f;
+	int* array = (int*) arr;
+    int f = array[threadIdx.x];
+    array[threadIdx.x] = f * f;
     return (void *)array;
     // __SMC_End
 }
 
-typedef void* (*func)();
+typedef void* (*func)(void *);
 
 typedef struct bag_elem
 {
@@ -115,7 +116,7 @@ __global__ void persistent_func(Bag_elem* Bag, unsigned int * __SMC_chunkCount, 
 
 	int x = threadIdx.x + __SMC_chunkID * blockDim.x;
 
-	Bag[__SMC_smid][x]->func(Bag[__SMC_smid][x]->arg, threadIdx.x);
+	// (Bag[__SMC_smid][x])->y((Bag[__SMC_smid][x])->arg);
 	
 	}
 
@@ -143,7 +144,7 @@ extern "C" void schedule(int n, int m)
 	for(i = 0; i < 6; i++)
 	{
 		for (y = 0; y < length_of_chunk; y++)
-			printf("%d ", (Bag[0][i].arg)[y]);
+			// printf("%d ", (Bag[0][i].arg)[y]);
 		printf("\n");
 	}
 	cudaFree(d_Bag);
