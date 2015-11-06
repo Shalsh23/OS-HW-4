@@ -159,11 +159,13 @@ extern "C" void schedule(int n, int m)
 	func d_user_func = h_user_func;
 
 	// allocating memory on cuda for cpu variables
-	Bag_elem (*d_Bag)	[1000];
+	Bag_elem d_Bag[6][1000];
+	Bag_elem h_Bag[6][1000];
+
 	cudaMalloc((void**) &d_Bag, sizeof(Bag_elem)*6*1000);
 
 	// copying data from cpu to gpu
-	cudaMemcpy(d_Bag, Bag, sizeof(Bag_elem)*6*1000, cudaMemcpyHostToDevice);
+	cudaMemcpy(&d_Bag, &Bag, sizeof(Bag_elem)*6*1000, cudaMemcpyHostToDevice);
 
 	unsigned int __SMC_workersNeeded = 2;  //__SMC_numNeeded();  // Need to be made dynamic based on user input.
 	unsigned int * __SMC_newChunkSeq = jobChunkArray;
@@ -171,13 +173,15 @@ extern "C" void schedule(int n, int m)
 
 	persistent_func <<< n, m >>> (d_Bag, d_user_func, __SMC_workerCount, __SMC_newChunkSeq, __SMC_workersNeeded);
 
-	cudaMemcpyAsync(Bag, d_Bag, sizeof(Bag_elem)*6*1000, cudaMemcpyDeviceToHost);
+	cudaMemcpy(&h_Bag, &d_Bag, sizeof(Bag_elem)*6*1000, cudaMemcpyDeviceToHost);
 
 	int i, y;
+	int *temp_ans;
 	for(i = 0; i < 6; i++)
 	{
+		temp_ans = (int *)h_Bag[i][0].arg;
 		for (y = 0; y < length_of_chunk; y++)
-			// printf("%d ", (Bag[0][i].arg)[y]);
+			printf("%d ", temp_ans[y]);
 		printf("\n");
 	}
 	cudaFree(d_Bag);
