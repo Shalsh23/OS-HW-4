@@ -8,6 +8,7 @@
 // {
 
 // }
+extern void * square(void *arr);
 
 int main(int argc, char* argv[])
 {

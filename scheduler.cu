@@ -51,7 +51,19 @@ unsigned int SMC_workerCount[] = {0, 0, 0, 0, 0, 0}; // Array of counter for blo
 // uint __SMC_smid;  \
 //  asm("mov.u32 %0, %smid;" : "=r"(__SMC_smid) );
 
-__device__ void * square(void *arr)
+// typedef struct func_arg
+// {
+// 	int* arg_arr;
+// 	int threadIdx;
+// } f_arg;
+
+// __device__ f_arg farg_dev; // device copy of struct f_arg
+
+
+
+
+
+extern "C" __device__ void * square(void *func_arg)
 {
 	// __SMC_Begin
 	//printf("The value of x is %d \n",x);
@@ -62,7 +74,8 @@ __device__ void * square(void *arr)
 
 	//if (x > length)
 	//	return;
-	int* array = (int*) arr;
+	int* array = (int*) func_arg;
+	// int threadIdx = func_arg->threadIdx;
     int f = array[threadIdx.x];
     array[threadIdx.x] = f * f;
     return (void *)array;
@@ -70,6 +83,9 @@ __device__ void * square(void *arr)
 }
 
 typedef void* (*func)(void *);
+
+// Static pointers to device functions
+__device__ func function;
 
 typedef struct bag_elem
 {
@@ -86,9 +102,10 @@ int jobchunk_id = 0;
 
 int length_of_chunk = 6;
 
-int taskAdd(void* (*func)(void*), void* arg, int sm)
+extern "C" int taskAdd(func userfunc, void* arg, int sm)
 {
-	(Bag[sm_index[sm]][sm]).y = square;
+	// (Bag[sm_index[sm]][sm]).y = square;
+	function = userfunc;
 	(Bag[sm_index[sm]][sm]).arg = arg;
 	int retval = jobchunk_id;
 	jobchunk_id++;
@@ -98,8 +115,9 @@ int taskAdd(void* (*func)(void*), void* arg, int sm)
 }
 
 
-__global__ void persistent_func(Bag_elem* Bag, unsigned int * __SMC_chunkCount, unsigned int * __SMC_newChunkSeq, unsigned int __SMC_chunksPerSM)
+__global__ void persistent_func(Bag_elem (*Bag)[1000], func d_user_func, unsigned int * __SMC_chunkCount, unsigned int * __SMC_newChunkSeq, unsigned int __SMC_chunksPerSM)
 {
+
 	__shared__ int __SMC_workingCTAs;
 	int __SMC_chunkID;
 	uint __SMC_smid;  \
@@ -116,6 +134,7 @@ __global__ void persistent_func(Bag_elem* Bag, unsigned int * __SMC_chunkCount, 
 
 	int x = threadIdx.x + __SMC_chunkID * blockDim.x;
 
+	( *d_user_func )( (Bag[__SMC_smid][x]).arg );
 	// (Bag[__SMC_smid][x])->y((Bag[__SMC_smid][x])->arg);
 	
 	}
@@ -125,8 +144,22 @@ __global__ void persistent_func(Bag_elem* Bag, unsigned int * __SMC_chunkCount, 
 
 extern "C" void schedule(int n, int m)
 {
+	//farg_dev = ;
+
+	func h_user_func;
+
+	// Copy device function pointer to host side
+	cudaMemcpyFromSymbol( &h_user_func, function, sizeof( func ) );
+
+	//f_arg h_f_arg;
+	//cudaMemcpyFromSymbol( &h_f_arg, farg_dev, sizeof( f_arg ) );
+
+	//f_arg d_f_arg = h_f_arg;
+
+	func d_user_func = h_user_func;
+
 	// allocating memory on cuda for cpu variables
-	Bag_elem* d_Bag;
+	Bag_elem (*d_Bag)	[1000];
 	cudaMalloc((void**) &d_Bag, sizeof(Bag_elem)*6*1000);
 
 	// copying data from cpu to gpu
@@ -136,7 +169,7 @@ extern "C" void schedule(int n, int m)
 	unsigned int * __SMC_newChunkSeq = jobChunkArray;
 	unsigned int * __SMC_workerCount = SMC_workerCount; // Array of counter for blocks created for each SM.
 
-	persistent_func <<< n, m >>> (d_Bag, __SMC_workerCount, __SMC_newChunkSeq, __SMC_workersNeeded);
+	persistent_func <<< n, m >>> (d_Bag, d_user_func, __SMC_workerCount, __SMC_newChunkSeq, __SMC_workersNeeded);
 
 	cudaMemcpyAsync(Bag, d_Bag, sizeof(Bag_elem)*6*1000, cudaMemcpyDeviceToHost);
 

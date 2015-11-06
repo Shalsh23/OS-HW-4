@@ -37,7 +37,7 @@ COMMONDIR  := $(ROOTDIR)/common
 
 # Compilers
 #NVCC       := nvcc -v -ccbin=/ncsu/gcc346/bin/g++
-NVCC       := nvcc -gencode=arch=compute_20,code=\"sm_20,compute_20\"
+NVCC       := nvcc -gencode=arch=compute_20,code=\"sm_20,compute_20\" -arch=sm_35
 CXX        := g++
 CC         := gcc
 LINK       := g++ -fPIC
