@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
-#define debug 1
+#define debug 0
 
 void * square(void *arr);	
 
