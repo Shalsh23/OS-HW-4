@@ -53,30 +53,30 @@ int main(int argc, char* argv[])
 
 	// sm 1,2 - small
 
-	taskAdd(square,small_arg,1);
+	taskAdd(square,small_arg,0);
 
 	if (debug) printf("In Main:		Added the first (small) task, sm = 1.\n");
 
-	taskAdd(square,small_arg+6,2);
+	taskAdd(square,small_arg+6,1);
 
 	if (debug) printf("In Main:		Added the second (small) task, sm = 2.\n");
 
 	// medium tasks
-	taskAdd(square,med_arg,3);
+	taskAdd(square,med_arg,2);
 
 	if (debug) printf("In Main:		Added the third (medium) task, sm = 3.\n");
 
-	taskAdd(square,med_arg+6,4);
+	taskAdd(square,med_arg+6,3);
 
 	if (debug) printf("In Main:		Added the fourth (medium) task, sm = 4.\n");
 
 
 	//large tasks
-	taskAdd(square,large_arg,5);
+	taskAdd(square,large_arg,4);
 
 	if (debug) printf("In Main:		Added the fifth (large) task, sm = 5.\n");
 
-	taskAdd(square,large_arg+6,6);
+	taskAdd(square,large_arg+6,5);
 
 	if (debug) printf("In Main:		Added the sixth (large) task, sm = 6.\n");
 

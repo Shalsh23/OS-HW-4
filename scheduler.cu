@@ -71,11 +71,9 @@ __global__ void persistent_func(Bag_elem Bag[6][1000], func d_user_func, unsigne
 	int __SMC_chunkID;
 	uint __SMC_smid;
  	asm("mov.u32 %0, %smid;" : "=r"(__SMC_smid) );
-
- 	int i;
-		for (i = 0; i < 6; i++)
-			printf("%u ",__SMC_chunkCount[i]);
-		printf("\n");
+		// for (i = 0; i < 6; i++)
+		// 	printf("%u ",__SMC_chunkCount[i]);
+		// printf("\n");
 
 	 printf("In kernel:		Got the Smid. It is %u.\n",__SMC_smid);
 
@@ -88,7 +86,7 @@ __global__ void persistent_func(Bag_elem Bag[6][1000], func d_user_func, unsigne
 
 	__syncthreads(); 
 
-	printf("In kernel:		workingCTAs. It is %d.\n",__SMC_workingCTAs);
+	//printf("In kernel:		workingCTAs. It is %d.\n",__SMC_workingCTAs);
 
 	if (__SMC_workingCTAs >= __SMC_chunksPerSM)
     return;
@@ -96,7 +94,7 @@ __global__ void persistent_func(Bag_elem Bag[6][1000], func d_user_func, unsigne
 	int __SMC_startChunkIDidx = __SMC_smid * __SMC_chunksPerSM + __SMC_workingCTAs * __SMC_chunksPerCTA;
 	for (int __SMC_chunkIDidx = __SMC_startChunkIDidx; __SMC_chunkIDidx < __SMC_startChunkIDidx + __SMC_chunksPerCTA; __SMC_chunkIDidx ++) { 
     __SMC_chunkID = __SMC_newChunkSeq[__SMC_chunkIDidx];
-
+    printf("Inside for loop.\n");
 	int x = threadIdx.x + __SMC_chunkID * blockDim.x;
 
 	( *d_user_func )( (Bag[__SMC_smid][x]).arg );
@@ -112,6 +110,8 @@ extern "C" void schedule(int n, int m)
 	if (debug) printf("In schedule:		Enter. Will copy device function pointer to host side.\n");
 
 	func h_user_func;
+	unsigned int * __SMC_newChunkSeq;
+	unsigned int * __SMC_chunkCount;
 
 	// Copy device function pointer to host side
 	cudaMemcpyFromSymbol( &h_user_func, function, sizeof( func ) );
@@ -128,13 +128,19 @@ extern "C" void schedule(int n, int m)
 
 	// cudaMalloc((void**) &__SMC_newChunkSeq, sizeof(int) * 1000);
 	// cudaMalloc((void**) &__SMC_workerCount, sizeof(Bag_elem)*6*1000);
-	// cudaMalloc((void**) &d_Bag, sizeof(Bag_elem)*6*1000);
-	// cudaMalloc((void**) &d_Bag, sizeof(Bag_elem)*6*1000);
+	cudaMalloc((void**) &d_Bag, sizeof(Bag_elem)*6*1000);
+	cudaMalloc((void**) &__SMC_chunkCount, sizeof(int)*1000);
+	cudaMalloc((void**) &__SMC_newChunkSeq, sizeof(int)*1000);
 
 
 	if (debug) printf("In schedule:		TBD - Cuda Memcpy for Bag in GPU.\n");
 	// copying data from cpu to gpu
 	cudaMemcpy(d_Bag, Bag, sizeof(Bag_elem)*6*1000, cudaMemcpyHostToDevice);
+	cudaMemcpy(__SMC_chunkCount, SMC_workerCount, sizeof(int)*6, cudaMemcpyHostToDevice);
+	cudaMemcpy(__SMC_newChunkSeq, jobChunkArray, sizeof(int)*6, cudaMemcpyHostToDevice);
+
+	//cudaMemcpy(d_Bag, Bag, sizeof(Bag_elem)*6*1000, cudaMemcpyHostToDevice);
+
 
 	if (debug) printf("In schedule:		SMC BEGIN.\n");
 
@@ -147,22 +153,14 @@ extern "C" void schedule(int n, int m)
 	}
 
 
-	unsigned int __SMC_workersNeeded = 2;  // Need to be made dynamic based on user input.
-	unsigned int * __SMC_newChunkSeq = jobChunkArray;
-	unsigned int * __SMC_workerCount = SMC_workerCount; // Array of counter for blocks created for each SM.
-
-
-	if (debug)
-	{
-		int i;
-		for (i = 0; i < 6; i++)
-			printf("%u ",__SMC_workerCount[i]);
-		printf("\n");
-	}
+	// unsigned int __SMC_workersNeeded = 2;  // Need to be made dynamic based on user input.
+	// unsigned int * __SMC_newChunkSeq = jobChunkArray;
+	// unsigned int * __SMC_workerCount = SMC_workerCount; // Array of counter for blocks created for each SM.
 
 	if (debug) printf("In schedule:		Kernel Call.\n");
 
-	persistent_func <<< n, m >>> (d_Bag, d_user_func, __SMC_workerCount, __SMC_newChunkSeq, __SMC_workersNeeded);
+//unsigned int * __SMC_chunkCount, unsigned int * __SMC_newChunkSeq, unsigned int __SMC_chunksPerSM
+	persistent_func <<< n, m >>> (d_Bag, d_user_func, __SMC_chunkCount, __SMC_newChunkSeq, 2);
 
 	cudaDeviceSynchronize();
 	cudaThreadSynchronize();
@@ -170,6 +168,7 @@ extern "C" void schedule(int n, int m)
 	if (debug) printf("In schedule:		Kernel Call Ends. Do CudaMemCpy.\n");
 
 	cudaMemcpy(h_Bag, d_Bag, sizeof(Bag_elem)*6*1000, cudaMemcpyDeviceToHost);
+
 
 	if (debug) printf("In schedule:		Results copied into the CPU. Time for printing.\n");
 
