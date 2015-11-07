@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cuda_runtime.h>
-#define debug 1
+#define debug 0
 
 
 unsigned int jobChunkArray[1000];
@@ -10,15 +10,6 @@ unsigned int SMC_workerCount[] = {0, 0, 0, 0, 0, 0}; // Array of counter for blo
 
 extern "C" __device__ void * square(void *func_arg)
 {
-	// __SMC_Begin
-	//printf("The value of x is %d \n",x);
-	//printf("The value of threadIdx.x is %d\n",threadIdx.x);
-      //  printf("The value of blockIdx.x is %d\n", blockIdx.x);
-	//printf("The value of blockIdx.x is %d\n",blockDim.x);
-	
-
-	//if (x > length)
-	//	return;
 	printf("In square\n.");
 	int* array = (int*) func_arg;
 	// int threadIdx = func_arg->threadIdx;
@@ -31,7 +22,7 @@ extern "C" __device__ void * square(void *func_arg)
 typedef void* (*func)(void *);
 
 // Static pointers to device functions
-__device__ func function;
+__device__ func function = square;
 
 typedef struct bag_elem
 {
@@ -51,9 +42,9 @@ int length_of_chunk = 6;
 extern "C" int taskAdd(func userfunc, void* arg, int sm)
 {
 	if (debug) printf("In taskAdd:		Adding the task for sm = %d.\n", sm);
-	function = userfunc;
+	//function = userfunc;
 	if (debug) printf("In taskAdd:		Adding the argument array for sm = %d. Bag's row_number is %d, column number is %d\n", sm, sm_index[sm], sm);
-	(Bag[sm_index[sm]][sm]).arg = arg;
+	(Bag[sm][sm_index[sm]]).arg = arg;
 	int retval = jobchunk_id;
 	jobchunk_id++;
 	if (debug) printf("In taskAdd:		Adding to the jobChunkArray: jobChunkCounter: %d, retval: %d\n", jobChunkCounter, retval);
@@ -63,9 +54,17 @@ extern "C" int taskAdd(func userfunc, void* arg, int sm)
 }
 
 
-__global__ void persistent_func(Bag_elem Bag[6][1000], func d_user_func, unsigned int * __SMC_chunkCount, unsigned int * __SMC_newChunkSeq, unsigned int __SMC_chunksPerSM)
+__global__ void persistent_func(Bag_elem** Bag, func op, unsigned int * __SMC_chunkCount, unsigned int * __SMC_newChunkSeq, unsigned int __SMC_chunksPerSM)
 {
-	//printf("In kernel:		Enter. Will start __SMC_Begin.\n");
+	printf("In kernel:		Enter. Will start __SMC_Begin.\n");
+	int *temp, i, y;
+	// for(i = 0; i < 6; i++)
+	// {
+	// 	temp = (int *)Bag[i][0]->arg;
+	// 	for (y = 0; y < 6; y++)
+	// 		printf("%d ", temp[y]);
+	// 	printf("\n");
+	// }
 
 	__shared__ int __SMC_workingCTAs;
 	int __SMC_chunkID;
@@ -75,14 +74,14 @@ __global__ void persistent_func(Bag_elem Bag[6][1000], func d_user_func, unsigne
 		// 	printf("%u ",__SMC_chunkCount[i]);
 		// printf("\n");
 
-	 printf("In kernel:		Got the Smid. It is %u.\n",__SMC_smid);
+	printf("In kernel:		Got the Smid. It is %u.\n",__SMC_smid);
 
 
  	int offsetInCTA = threadIdx.x;
 	if (offsetInCTA == 0)
     	__SMC_workingCTAs = atomicInc((unsigned int *)&__SMC_chunkCount[__SMC_smid], INT_MAX);
 
-    printf("In kernel:		workingCTAs. It is %d.\n",__SMC_workingCTAs);
+    // printf("In kernel:		workingCTAs. It is %d.\n",__SMC_workingCTAs);
 
 	__syncthreads(); 
 
@@ -94,10 +93,14 @@ __global__ void persistent_func(Bag_elem Bag[6][1000], func d_user_func, unsigne
 	int __SMC_startChunkIDidx = __SMC_smid * __SMC_chunksPerSM + __SMC_workingCTAs * __SMC_chunksPerCTA;
 	for (int __SMC_chunkIDidx = __SMC_startChunkIDidx; __SMC_chunkIDidx < __SMC_startChunkIDidx + __SMC_chunksPerCTA; __SMC_chunkIDidx ++) { 
     __SMC_chunkID = __SMC_newChunkSeq[__SMC_chunkIDidx];
-    printf("Inside for loop.\n");
+    //printf("chunk id \n%d\n", __SMC_chunkID);
 	int x = threadIdx.x + __SMC_chunkID * blockDim.x;
+    //printf("x = \n%d\n", x);
 
-	( *d_user_func )( (Bag[__SMC_smid][x]).arg );
+	//printf("Inside loop\n");
+	// square((Bag[__SMC_smid][x]).arg );
+	int anum[] = {1,2};
+	square(anum);
 	// (Bag[__SMC_smid][x])->y((Bag[__SMC_smid][x])->arg);
 	
 	}
@@ -107,6 +110,8 @@ __global__ void persistent_func(Bag_elem Bag[6][1000], func d_user_func, unsigne
 
 extern "C" void schedule(int n, int m)
 {
+
+	int i,y;
 	if (debug) printf("In schedule:		Enter. Will copy device function pointer to host side.\n");
 
 	func h_user_func;
@@ -121,7 +126,7 @@ extern "C" void schedule(int n, int m)
 	func d_user_func = h_user_func;
 
 	// allocating memory on cuda for cpu variables
-	Bag_elem d_Bag[6][1000];
+	Bag_elem *d_Bag;
 	Bag_elem h_Bag[6][1000];
 
 	if (debug) printf("In schedule:		TBD - Cuda Malloc for Bag in GPU.\n");
@@ -160,7 +165,7 @@ extern "C" void schedule(int n, int m)
 	if (debug) printf("In schedule:		Kernel Call.\n");
 
 //unsigned int * __SMC_chunkCount, unsigned int * __SMC_newChunkSeq, unsigned int __SMC_chunksPerSM
-	persistent_func <<< n, m >>> (d_Bag, d_user_func, __SMC_chunkCount, __SMC_newChunkSeq, 2);
+	persistent_func <<< n, m >>> (&d_Bag, d_user_func, __SMC_chunkCount, __SMC_newChunkSeq, 2);
 
 	cudaDeviceSynchronize();
 	cudaThreadSynchronize();
@@ -169,10 +174,8 @@ extern "C" void schedule(int n, int m)
 
 	cudaMemcpy(h_Bag, d_Bag, sizeof(Bag_elem)*6*1000, cudaMemcpyDeviceToHost);
 
-
 	if (debug) printf("In schedule:		Results copied into the CPU. Time for printing.\n");
 
-	int i, y;
 	int *temp_ans;
 	for(i = 0; i < 6; i++)
 	{

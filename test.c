@@ -19,9 +19,9 @@ int main(int argc, char* argv[])
 	if (debug) printf("Taken number Of blocks and threads.\n");
 	// Bag B;
 
-	long int small_arg[12]; // small
-	long int med_arg [12];
-	long int large_arg[12];
+	int small_arg[12]; // small
+	int med_arg [12];
+	int large_arg[12];
 
 	int i;
 
@@ -36,14 +36,14 @@ int main(int argc, char* argv[])
 
 	for(i = 0; i < 12; i++)
 	{
-		small_arg[i] = 100 + i;
+		med_arg[i] = 100 + i;
 	}
 
 	if (debug) printf("Taking input for large work.\n");
 
 	for(i = 0; i < 12; i++)
 	{
-		small_arg[i] = 10000 + i;
+		large_arg[i] = 10000 + i;
 	}
 
 	if (debug) printf("All inputs taken. Will start adding tasks.\n");
